@@ -2,14 +2,15 @@ package db
 
 import (
 	"fmt"
+	"open_im_sdk/pkg/db/model_struct"
 	"open_im_sdk/pkg/utils"
 	"strings"
 )
 
-func (d *DataBase) GetSubDepartmentList(departmentID string, args ...int) ([]*LocalDepartment, error) {
+func (d *DataBase) GetSubDepartmentList(departmentID string, args ...int) ([]*model_struct.LocalDepartment, error) {
 	d.mRWMutex.RLock()
 	defer d.mRWMutex.RUnlock()
-	var departmentList []LocalDepartment
+	var departmentList []model_struct.LocalDepartment
 	var err error
 	sql := d.conn.Where("parent_id = ? ", departmentID).Order("order_department DESC")
 	if len(args) == 2 {
@@ -19,7 +20,7 @@ func (d *DataBase) GetSubDepartmentList(departmentID string, args ...int) ([]*Lo
 	} else {
 		err = sql.Find(&departmentList).Error
 	}
-	var transfer []*LocalDepartment
+	var transfer []*model_struct.LocalDepartment
 	for _, v := range departmentList {
 		v1 := v
 		transfer = append(transfer, &v1)
@@ -27,13 +28,13 @@ func (d *DataBase) GetSubDepartmentList(departmentID string, args ...int) ([]*Lo
 	return transfer, utils.Wrap(err, utils.GetSelfFuncName()+" failed")
 }
 
-func (d *DataBase) InsertDepartment(department *LocalDepartment) error {
+func (d *DataBase) InsertDepartment(department *model_struct.LocalDepartment) error {
 	d.mRWMutex.Lock()
 	defer d.mRWMutex.Unlock()
 	return utils.Wrap(d.conn.Create(department).Error, "InsertDepartment failed")
 }
 
-func (d *DataBase) UpdateDepartment(department *LocalDepartment) error {
+func (d *DataBase) UpdateDepartment(department *model_struct.LocalDepartment) error {
 	d.mRWMutex.Lock()
 	defer d.mRWMutex.Unlock()
 	return utils.Wrap(d.conn.Model(department).Select("*").Updates(*department).Error, "UpdateDepartment failed")
@@ -42,23 +43,23 @@ func (d *DataBase) UpdateDepartment(department *LocalDepartment) error {
 func (d *DataBase) DeleteDepartment(departmentID string) error {
 	d.mRWMutex.Lock()
 	defer d.mRWMutex.Unlock()
-	local := LocalDepartment{DepartmentID: departmentID}
+	local := model_struct.LocalDepartment{DepartmentID: departmentID}
 	return utils.Wrap(d.conn.Delete(&local).Error, "DeleteDepartment failed")
 }
 
-func (d *DataBase) GetDepartmentInfo(departmentID string) (*LocalDepartment, error) {
-	var local LocalDepartment
+func (d *DataBase) GetDepartmentInfo(departmentID string) (*model_struct.LocalDepartment, error) {
+	var local model_struct.LocalDepartment
 	return &local, utils.Wrap(d.conn.Where("department_id=?", departmentID).First(&local).Error, "GetDepartmentInfo failed")
 }
 
-func (d *DataBase) GetAllDepartmentList() ([]*LocalDepartment, error) {
+func (d *DataBase) GetAllDepartmentList() ([]*model_struct.LocalDepartment, error) {
 	d.mRWMutex.RLock()
 	defer d.mRWMutex.RUnlock()
-	var departmentList []LocalDepartment
+	var departmentList []model_struct.LocalDepartment
 	d.conn.Debug()
 	//	err := d.conn.Order("order DESC").Find(&departmentList).Error
 	err := d.conn.Order("order_department DESC").Find(&departmentList).Error
-	var transfer []*LocalDepartment
+	var transfer []*model_struct.LocalDepartment
 	for _, v := range departmentList {
 		v1 := v
 		transfer = append(transfer, &v1)
@@ -66,13 +67,13 @@ func (d *DataBase) GetAllDepartmentList() ([]*LocalDepartment, error) {
 	return transfer, utils.Wrap(err, utils.GetSelfFuncName()+" failed")
 }
 
-func (d *DataBase) GetParentDepartmentList(departmentID string) ([]*LocalDepartment, error) {
-	var departmentList []*LocalDepartment
+func (d *DataBase) GetParentDepartmentList(departmentID string) ([]*model_struct.LocalDepartment, error) {
+	var departmentList []*model_struct.LocalDepartment
 	err := d.getDepartmentList(&departmentList, departmentID)
 	return departmentList, err
 }
 
-func (d *DataBase) getDepartmentList(departmentList *[]*LocalDepartment, departmentID string) error {
+func (d *DataBase) getDepartmentList(departmentList *[]*model_struct.LocalDepartment, departmentID string) error {
 	if len(*departmentList) == 0 {
 		department, err := d.GetDepartmentInfo(departmentID)
 		if err != nil {
@@ -85,7 +86,7 @@ func (d *DataBase) getDepartmentList(departmentList *[]*LocalDepartment, departm
 		return utils.Wrap(err, "getParentDepartment failed")
 	}
 	if department.DepartmentID != "" {
-		*departmentList = append([]*LocalDepartment{&department}, *departmentList...)
+		*departmentList = append([]*model_struct.LocalDepartment{&department}, *departmentList...)
 		err := d.getDepartmentList(departmentList, department.DepartmentID)
 		if err != nil {
 			return utils.Wrap(err, "getParentDepartmentList failed")
@@ -94,21 +95,16 @@ func (d *DataBase) getDepartmentList(departmentList *[]*LocalDepartment, departm
 	return nil
 }
 
-func (d *DataBase) getParentDepartment(departmentID string) (LocalDepartment, error) {
-	var department LocalDepartment
+func (d *DataBase) getParentDepartment(departmentID string) (model_struct.LocalDepartment, error) {
+	var department model_struct.LocalDepartment
 	var parentID string
 	d.conn.Model(&department).Where("department_id=?", departmentID).Pluck("parent_id", &parentID)
 	err := d.conn.Where("department_id=?", parentID).Find(&department).Error
 	return department, utils.Wrap(err, "getParentDepartment failed")
 }
 
-type SearchDepartmentMemberResult struct {
-	LocalDepartmentMember
-	DepartmentName string `gorm:"column:name;size:256" json:"departmentName"`
-}
-
-func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSearchEmail, isSearchMobile, isSearchPosition, isSearchTelephone, isSearchUserEnglishName, isSearchUserID bool, offset, count int) ([]*SearchDepartmentMemberResult, error) {
-	var departmentMemberList []*SearchDepartmentMemberResult
+func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSearchEmail, isSearchMobile, isSearchPosition, isSearchTelephone, isSearchUserEnglishName, isSearchUserID bool, offset, count int) ([]*model_struct.SearchDepartmentMemberResult, error) {
+	var departmentMemberList []*model_struct.SearchDepartmentMemberResult
 	likeCondition := fmt.Sprintf("%%%s%%", keyWord)
 	var likeConditions []interface{}
 	var whereConditions []string
@@ -145,7 +141,7 @@ func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSe
 		whereConditions = append(whereConditions, "nickname LIKE ?")
 		likeConditions = append(likeConditions, likeCondition)
 	}
-	err := d.conn.Model(&LocalDepartmentMember{}).
+	err := d.conn.Model(&model_struct.LocalDepartmentMember{}).
 		Select([]string{"local_departments.name, local_department_members.*"}).
 		//Where("nickname LIKE ? or english_name LIKE ? or mobile LIKE ? or telephone LIKE ? or email LIKE ? or position LIKE ?",
 		Where(strings.Join(whereConditions, " or "),
@@ -156,9 +152,9 @@ func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSe
 	return departmentMemberList, utils.Wrap(err, "")
 }
 
-func (d *DataBase) SearchDepartment(keyWord string, offset, count int) ([]*LocalDepartment, error) {
-	var departmentMemberList []*LocalDepartment
+func (d *DataBase) SearchDepartment(keyWord string, offset, count int) ([]*model_struct.LocalDepartment, error) {
+	var departmentMemberList []*model_struct.LocalDepartment
 	likeCondition := fmt.Sprintf("%%%s%%", keyWord)
-	err := d.conn.Model(&LocalDepartment{}).Where("name LIKE ? and department_id != 0", likeCondition).Offset(offset).Limit(count).Find(&departmentMemberList).Error
+	err := d.conn.Model(&model_struct.LocalDepartment{}).Where("name LIKE ? and department_id != 0", likeCondition).Offset(offset).Limit(count).Find(&departmentMemberList).Error
 	return departmentMemberList, utils.Wrap(err, "")
 }

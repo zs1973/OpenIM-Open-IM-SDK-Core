@@ -15,7 +15,7 @@ type orgBaseCallback struct {
 }
 
 func (t orgBaseCallback) OnSuccess(data string) {
-	log.Info(t.OperationID, t.CallName, utils.GetSelfFuncName(), data)
+	fmt.Println(t.OperationID, t.CallName, utils.GetSelfFuncName(), data)
 
 }
 
@@ -79,7 +79,7 @@ func DoTestSearchOrganization(input string, offset, count int) {
 	test.OperationID = utils.OperationIDGenerator()
 	test.CallName = utils.GetSelfFuncName()
 	params := sdk_params_callback.SearchOrganizationParams{
-		KeyWord:                 "+8613900000000",
+		KeyWord:                 "o",
 		IsSearchUserName:        false,
 		IsSearchUserEnglishName: false,
 		IsSearchPosition:        false,
