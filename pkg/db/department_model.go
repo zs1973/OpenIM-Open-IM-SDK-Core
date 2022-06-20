@@ -47,8 +47,6 @@ func (d *DataBase) DeleteDepartment(departmentID string) error {
 }
 
 func (d *DataBase) GetDepartmentInfo(departmentID string) (*LocalDepartment, error) {
-	d.mRWMutex.RLock()
-	defer d.mRWMutex.RUnlock()
 	var local LocalDepartment
 	return &local, utils.Wrap(d.conn.Where("department_id=?", departmentID).First(&local).Error, "GetDepartmentInfo failed")
 }
@@ -69,8 +67,6 @@ func (d *DataBase) GetAllDepartmentList() ([]*LocalDepartment, error) {
 }
 
 func (d *DataBase) GetParentDepartmentList(departmentID string) ([]*LocalDepartment, error) {
-	d.mRWMutex.RLock()
-	defer d.mRWMutex.RUnlock()
 	var departmentList []*LocalDepartment
 	err := d.getDepartmentList(&departmentList, departmentID)
 	return departmentList, err
@@ -99,8 +95,6 @@ func (d *DataBase) getDepartmentList(departmentList *[]*LocalDepartment, departm
 }
 
 func (d *DataBase) getParentDepartment(departmentID string) (LocalDepartment, error) {
-	d.mRWMutex.RLock()
-	defer d.mRWMutex.RUnlock()
 	var department LocalDepartment
 	var parentID string
 	d.conn.Model(&department).Where("department_id=?", departmentID).Pluck("parent_id", &parentID)
@@ -114,8 +108,6 @@ type SearchDepartmentMemberResult struct {
 }
 
 func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSearchEmail, isSearchMobile, isSearchPosition, isSearchTelephone, isSearchUserEnglishName, isSearchUserID bool, offset, count int) ([]*SearchDepartmentMemberResult, error) {
-	d.mRWMutex.RLock()
-	defer d.mRWMutex.RUnlock()
 	var departmentMemberList []*SearchDepartmentMemberResult
 	likeCondition := fmt.Sprintf("%%%s%%", keyWord)
 	var likeConditions []interface{}
@@ -165,8 +157,6 @@ func (d *DataBase) SearchDepartmentMember(keyWord string, isSearchUserName, isSe
 }
 
 func (d *DataBase) SearchDepartment(keyWord string, offset, count int) ([]*LocalDepartment, error) {
-	d.mRWMutex.RLock()
-	defer d.mRWMutex.RUnlock()
 	var departmentMemberList []*LocalDepartment
 	likeCondition := fmt.Sprintf("%%%s%%", keyWord)
 	err := d.conn.Model(&LocalDepartment{}).Where("name LIKE ? and department_id != 0", likeCondition).Offset(offset).Limit(count).Find(&departmentMemberList).Error

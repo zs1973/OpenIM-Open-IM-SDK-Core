@@ -139,7 +139,9 @@ func (progress *UploadProgress) Read(b []byte) (int, error) {
 	percent := int(float64(progress.current) * 100 / float64(progress.total))
 	if percent != progress.percent && percent%5 == 0 {
 		progress.percent = percent
-		progress.callbackFunc(progress.percent)
+		if progress.callbackFunc != nil {
+			progress.callbackFunc(progress.percent)
+		}
 	}
 	return int(n), nil
 }
