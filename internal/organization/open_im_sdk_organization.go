@@ -1,6 +1,7 @@
 package organization
 
 import (
+	"fmt"
 	"open_im_sdk/open_im_sdk_callback"
 	"open_im_sdk/pkg/common"
 	"open_im_sdk/pkg/log"
@@ -65,7 +66,8 @@ func (o *Organization) GetDepartmentMemberAndSubDepartment(callback open_im_sdk_
 	go func() {
 		log.NewInfo(operationID, fName, "args: ", departmentID)
 		result := o.getDepartmentMemberAndSubDepartment(callback, departmentID, operationID)
-		resp := utils.StructToJsonStringDefault(result)
+		fmt.Println(result)
+		resp := utils.StructToJsonString(result)
 		callback.OnSuccess(resp)
 		log.NewInfo(operationID, fName, " callback: ", resp)
 	}()
