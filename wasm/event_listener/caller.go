@@ -1,3 +1,20 @@
+// Copyright © 2023 OpenIM SDK. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build js && wasm
+// +build js,wasm
+
 package event_listener
 
 import (
@@ -5,6 +22,7 @@ import (
 	"errors"
 	"open_im_sdk/pkg/log"
 	"open_im_sdk/pkg/utils"
+	"open_im_sdk/wasm/exec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,17 +38,10 @@ type Caller interface {
 	SyncCall() (result []interface{})
 }
 
-func extractArrayBuffer(arrayBuffer js.Value) []byte {
-	uint8Array := js.Global().Get("Uint8Array").New(arrayBuffer)
-	dst := make([]byte, uint8Array.Length())
-	js.CopyBytesToGo(dst, uint8Array)
-	return dst
-}
-
 type FuncLogic func()
 
 var ErrNotSetCallback = errors.New("not set callback to call")
-var ErrNotSetFunc = errors.New("not set func to call")
+var ErrNotSetFunc = errors.New("not set funcation to call")
 
 type ReflectCall struct {
 	funcName  interface{}
@@ -42,12 +53,6 @@ func NewCaller(funcName interface{}, callback CallbackWriter, arguments *[]js.Va
 	return &ReflectCall{funcName: funcName, callback: callback, arguments: *arguments}
 }
 
-//func (r *ReflectCall) NewCaller(funcName interface{}, callback CallbackWriter, arguments *[]js.Value) Caller {
-//	r.funcName = funcName
-//	r.callback = callback
-//	r.arguments = *arguments
-//	return r
-//}
 func (r *ReflectCall) AsyncCallWithCallback() interface{} {
 	return r.callback.HandlerFunc(r.asyncCallWithCallback)
 
@@ -107,7 +112,7 @@ func (r *ReflectCall) asyncCallWithCallback() {
 		case reflect.Int64:
 			values = append(values, reflect.ValueOf(int64(r.arguments[i].Int())))
 		case reflect.Ptr:
-			values = append(values, reflect.ValueOf(bytes.NewBuffer(extractArrayBuffer(r.arguments[i]))))
+			values = append(values, reflect.ValueOf(bytes.NewBuffer(exec.ExtractArrayBuffer(r.arguments[i]))))
 		default:
 			log.Error("AsyncCallWithCallback", "input args type not support:", strconv.Itoa(int(typeFuncName.In(temp).Kind())))
 			panic("input args type not support:" + strconv.Itoa(int(typeFuncName.In(temp).Kind())))
@@ -176,6 +181,8 @@ func (r *ReflectCall) asyncCallWithOutCallback() {
 				case reflect.Bool:
 					result = append(result, v.Bool())
 				case reflect.Int32:
+					result = append(result, v.Int())
+				case reflect.Int:
 					result = append(result, v.Int())
 				default:
 					panic("not support type")
